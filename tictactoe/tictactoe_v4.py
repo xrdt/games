@@ -97,7 +97,7 @@ class AI:
 
 
     def minimax(self, board, scores, player):
-        # Currenty using the random AI
+        # Currently using the random AI
         return self.random_move(board)
 
 

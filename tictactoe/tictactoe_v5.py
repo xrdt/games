@@ -1,5 +1,6 @@
 import pygame
 import random
+import copy
 
 
 class Game:
@@ -51,7 +52,9 @@ class AISelection:
 
     def clicked(self, position):
         if self.yes.clicked(position):
-            starter = random.choice([1, 'AI'])
+            # TODO
+            starter = 'AI'
+            # starter = random.choice([1, 'AI'])
             return PlayerChoice(self.shape, starter, True)
         elif self.no.clicked(position):
             starter = random.choice([1, 2])
@@ -89,20 +92,48 @@ class PlayerChoice:
 
 class AI:
     def play(self, board):
-        choice = self.minimax(board, {}, 'AI')
+        choice, score = self.minimax(board, 'AI', 0)
         cells = {0: (98, 98), 1: (297, 98), 2: (500, 98), 3: (98, 297),
                  4: (297, 297), 5: (500, 297), 6: (98, 500), 7: (297, 500),
                  8: (500, 500)}
         return cells[choice]
 
 
-    def minimax(self, board, scores, player):
-        # Currently using the random AI
-        return self.random_move(board)
+    def minimax(self, board, player, depth):
+        switch_players= {'AI': 1, 1: 'AI'}
 
+        # Has someone won?
+        result = self.winner(board)
+        if result != None:
+            if result == 0:
+                return 0, 0
+            elif result == 'AI':
+                # Win as quickly as possible
+                return 0, 10 - depth
+            else:
+                # Lose as slowly as possible
+                return 0, depth - 10
 
-    def random_move(self, board):
-        return random.choice(self.available_moves(board))
+        # Recurse another level
+        temp_scores = {}
+        for move in self.available_moves(board):
+            # Make the move
+            board[int(move/3)][move%3] = player
+
+            # Evaluate the move
+            _, temp_scores[move] = self.minimax(board,
+                                                switch_players[player],
+                                                depth+1)
+            board[int(move/3)][move%3] = 0
+
+        if player == 'AI':
+            # choose the maximal move by the score
+            max_move = max(temp_scores, key=temp_scores.get)
+            return max_move, temp_scores[max_move]
+        else:
+            # choose the minimal move by the score
+            min_move = min(temp_scores, key=temp_scores.get)
+            return min_move, temp_scores[min_move]
 
 
     def available_moves(self, board):
@@ -121,38 +152,38 @@ class AI:
         # Check if a player has won the board
         for i in range(3):
             # horizontal
-            if self.filled_boxes[i] == [1, 1, 1] or \
-               self.filled_boxes[i] == [2, 2, 2] and \
-               (0 not in self.filled_boxes[i]):
+            if board[i] == [1, 1, 1] or \
+               board[i] == ['AI', 'AI', 'AI'] and \
+               (0 not in board[i]):
                 if i == 0:
-                    return self.filled_boxes[i][0]
+                    return board[i][0]
                 elif i == 1:
-                    return self.filled_boxes[i][0]
+                    return board[i][0]
                 else:
-                    return self.filled_boxes[i][0]
+                    return board[i][0]
             # vertical
-            if self.filled_boxes[0][i] == self.filled_boxes[1][i] \
-                                       == self.filled_boxes[2][i] and \
-               (self.filled_boxes[0][i] != 0 and self.filled_boxes[1][i] != 0 \
-                and self.filled_boxes[2][i] != 0):
-                return self.filled_boxes[0][i]
+            if board[0][i] == board[1][i] \
+                                       == board[2][i] and \
+               (board[0][i] != 0 and board[1][i] != 0 \
+                and board[2][i] != 0):
+                return board[0][i]
 
         # Diagonal /
-        if self.filled_boxes[2][0] == self.filled_boxes[1][1] \
-                                   == self.filled_boxes[0][2] and \
-           (self.filled_boxes[2][0] != 0 and self.filled_boxes[1][1] != 0 and \
-            self.filled_boxes[0][2] != 0):
-            return self.filled_boxes[2][0]
+        if board[2][0] == board[1][1] \
+                                   == board[0][2] and \
+           (board[2][0] != 0 and board[1][1] != 0 and \
+            board[0][2] != 0):
+            return board[2][0]
 
         # Diagonal \
-        if (self.filled_boxes[0][0] == self.filled_boxes[1][1] \
-                                   == self.filled_boxes[2][2]) and \
-           (self.filled_boxes[0][0] != 0 and self.filled_boxes[1][1] != 0 and \
-            self.filled_boxes[2][2] != 0):
-            return self.filled_boxes[0][0]
+        if (board[0][0] == board[1][1] \
+                                   == board[2][2]) and \
+           (board[0][0] != 0 and board[1][1] != 0 and \
+            board[2][2] != 0):
+            return board[0][0]
 
         # Draw
-        if 0 not in [j for i in self.filled_boxes for j in i]:
+        if 0 not in [j for i in board for j in i]:
             return 0
 
         return None
@@ -336,7 +367,13 @@ class Main:
 
         self.screen = screen
         if self.player == 'AI':
-            choice = AI().play(self.filled_boxes)
+            board = copy.deepcopy(self.filled_boxes)
+            # Start somewhere random
+            choice = random.choice(list(range(9)))
+            cells = {0: (98, 98), 1: (297, 98), 2: (500, 98), 3: (98, 297),
+                     4: (297, 297), 5: (500, 297), 6: (98, 500), 7: (297, 500),
+                     8: (500, 500)}
+            choice = cells[choice]
 
             clock = pygame.time.Clock()
             current_time = pygame.time.get_ticks()
@@ -351,9 +388,10 @@ class Main:
             self.handle_placement(choice)
 
 
-
     def clicked(self, position):
-        self.handle_placement(position)
+        click = self.handle_placement(position)
+        if click == False:
+            return None
 
         result, player = self.handle_win()
         if result != False:
@@ -370,7 +408,8 @@ class Main:
             return End(color, result, player)
 
         if self.ai:
-            choice = AI().play(self.filled_boxes)
+            board = copy.deepcopy(self.filled_boxes)
+            choice = AI().play(board)
 
             clock = pygame.time.Clock()
             current_time = pygame.time.get_ticks()
@@ -378,7 +417,7 @@ class Main:
                 for event in pygame.event.get():
                     pass
 
-                if pygame.time.get_ticks() - current_time >= 150:
+                if pygame.time.get_ticks() - current_time >= 350:
                     break
                 clock.tick(5)
 
@@ -404,7 +443,8 @@ class Main:
         for i in range(3):
             # horizontal
             if self.filled_boxes[i] == [1, 1, 1] or \
-               self.filled_boxes[i] == [2, 2, 2] and \
+               self.filled_boxes[i] == [2, 2, 2] or \
+               self.filled_boxes[i] == ['AI', 'AI', 'AI'] and \
                (0 not in self.filled_boxes[i]):
                 if i == 0:
                     return (0, 2), self.filled_boxes[i][0]
@@ -595,7 +635,6 @@ class Main:
                 self.player = 1
         else:
             self.player = (self.player % 2) + 1
-
 
 
 class End:

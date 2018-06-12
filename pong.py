@@ -3,16 +3,25 @@ import pygame
 class Game:
 
 
+class Welcome:
+
+
+class Shape:
+
+
 class Instructions:
 
 
-class Player1:
+class End:
 
-class Player2:
+
+class Paddle:
+
+
+class AI:
 
 
 class Ball:
-
 
 
 

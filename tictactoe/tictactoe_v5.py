@@ -52,9 +52,7 @@ class AISelection:
 
     def clicked(self, position):
         if self.yes.clicked(position):
-            # TODO
-            starter = 'AI'
-            # starter = random.choice([1, 'AI'])
+            starter = random.choice([1, 'AI'])
             return PlayerChoice(self.shape, starter, True)
         elif self.no.clicked(position):
             starter = random.choice([1, 2])
